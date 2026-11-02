@@ -6,6 +6,19 @@ Ejecuta Git desde la raiz y las pruebas con el directorio del componente. Desde 
 
 En el Dia 1 usa solo ramas locales: day1/prompting, main y checkpoint/day1. Conserva origin creado al clonar tu copia del template; no crees otros remotos, tags ni PR y no hagas push durante el Dia 1. La revision y aprobacion humanas y las pruebas reales preceden a la integracion y al checkpoint; no las inventes. Las referencias a PR y controles remotos de las secciones originales son generales: conserva su configuracion, pero en el Dia 1 prevalece este cierre local.
 
+## Prompts y referencias
+
+Este archivo es unico y contiene solo reglas permanentes. Los pedidos de una tarea concreta viven en [prompts/](./prompts/) con el nombre `<componente>-<tarea>.md` (por ejemplo [auth-discovery.md](./prompts/auth-discovery.md)) y siguen esta estructura: AMBITO, CONTEXTO, OBJETIVO, RESTRICCIONES, CRITERIOS DE ACEPTACION y FORMATO DE RESPUESTA. No se inyectan solos: ábrelos cuando la tarea los nombre.
+
+Lee otros archivos solo cuando la tarea lo requiera:
+
+- [README.md](./README.md): pasos del Lab 01, comandos y cierre local por ramas.
+- [RETO.md](./RETO.md): candidatos por comprobar, no hallazgos confirmados.
+- [docs/GOOD_PRACTICES.md](./docs/GOOD_PRACTICES.md): convenciones a las que debe converger el refactor.
+- [docs/ENDPOINTS.md](./docs/ENDPOINTS.md) y [docs/TESTING.md](./docs/TESTING.md): contratos y evidencias de pruebas, si existen.
+- [HALLAZGOS.md](./HALLAZGOS.md) y [PLAN.md](./PLAN.md): hallazgos y plan aprobado, si existen.
+- [docs/auth.http](./docs/auth.http) y [docs/api.http](./docs/api.http): peticiones de prueba, si existen.
+
 ## auth
 
 ### Contrato para agentes

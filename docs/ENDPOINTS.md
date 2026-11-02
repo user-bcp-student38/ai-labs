@@ -5,6 +5,10 @@ componente `auth` completo; en `api` solo se documenta el contrato de
 autorización porque fue el único punto tocado (coordinado con H-AUTH-05/06).
 El resto de endpoints de `api` queda pendiente de su propio Discovery.
 
+Peticiones listas para ejecutar (extensión REST Client de VS Code o compatible):
+[auth.http](./auth.http) y [api.http](./api.http). Requieren los servicios
+levantados en `localhost:8080` (auth) y `localhost:8000` (api).
+
 ## auth
 
 ### `POST /auth/login`
