@@ -1,0 +1,22 @@
+# Hallazgos
+
+IDs por componente: `H-AUTH-NN`, `H-API-NN`, `H-WEB-NN`. Estados: `Pendiente`
+(confirmado en código, falta decisión/implementación) o `No encontrado`.
+
+## auth
+
+| ID | Área | Caso | Evidencia | Estado | Objetivo de aprendizaje |
+|---|---|---|---|---|---|
+| H-AUTH-01 | SCA | `commons-text` fijado en `1.9` | Antes: `auth/pom.xml:39-42` (commit previo al refactor). Después: `auth/pom.xml` → `1.15.0` | Resuelto | `1.9` está afectado por CVE-2022-42889 (Text4Shell, CVSS 9.8). Actualizado a `1.15.0` (misma versión ya propuesta por Dependabot en `origin/dependabot/maven/auth/org.apache.commons-text-commons-text-1.15.0`). `mvn verify` en verde tras el cambio. |
+| H-AUTH-02 | SCA | `quarkus.platform.version` en `3.27.4`, `sqlite-jdbc` en `3.50.3.0`, `jacoco-maven-plugin` en `0.8.12` | `auth/pom.xml` → `3.40.1.1` / `3.54.1.0` / `0.8.16` (+ `maven-surefire-plugin` a `3.6.1`) | Resuelto | Versiones alineadas con las ramas ya abiertas por Dependabot en `origin`. `mvn clean verify` compila y las 9 pruebas pasan con las nuevas versiones. |
+| H-AUTH-03 | Datos | Contraseñas en texto plano: se insertaban y comparaban sin hash | [UserRepository.java](/auth/src/main/java/com/bcp/workshop/auth/UserRepository.java) (antes `LegacyDatabase.java:23-24,32`) | Resuelto | Se sembran con `BcryptUtil.bcryptHash` (`quarkus-elytron-security-common`) y se verifican con `BcryptUtil.matches` en `AuthService`. Columna renombrada a `password_hash`. |
+| H-AUTH-04 | SQL | Concatenación de credenciales en el `SELECT` (inyección explotable) | [UserRepository.findByUsername](/auth/src/main/java/com/bcp/workshop/auth/UserRepository.java) (antes `LegacyDatabase.java:32`) | Resuelto | Consulta por `username` con `PreparedStatement` parametrizado; la contraseña ya no participa del SQL. Evidencia del exploit y del fix: `AuthResourceTest.rejectsSqlInjectionInUsername` — con el código original fallaba (login exitoso con `username="student' -- "` y password incorrecta); tras el fix pasa (401). |
+| H-AUTH-05 | Token | Token Base64 casero con secreto embebido en el código | [TokenService.java](/auth/src/main/java/com/bcp/workshop/auth/TokenService.java) (antes `LegacyTokenUtil.java:8,14-15`) | Resuelto | JWT firmado HS256 (`io.jsonwebtoken:jjwt`) con `iss`, `sub`, `role`, `exp`. Alcance ampliado (acordado) a `api/app/main.py::legacy_identity`, que ahora verifica firma/emisor/expiración con `pyjwt` en vez de decodificar Base64. Evidencia: `test_rejects_expired_token` y `test_rejects_token_with_wrong_signature` en `api/tests/test_api.py`. |
+| H-AUTH-06 | Configuración | Secreto embebido y CORS abierto a cualquier origen | `auth/src/main/resources/application.properties`; `compose.yaml` | Resuelto | `quarkus.http.cors.origins` y el secreto de firma (`auth.jwt.secret`) ahora se leen de `AUTH_CORS_ORIGINS`/`AUTH_JWT_SECRET` (por defecto `http://localhost:4200` y un valor marcado explícitamente como solo de desarrollo). |
+| H-AUTH-07 | Clean code | `AuthResource.login` mezclaba validación, persistencia, token y respuesta en un método con 4 niveles de anidamiento | [AuthResource.java](/auth/src/main/java/com/bcp/workshop/auth/AuthResource.java), [AuthService.java](/auth/src/main/java/com/bcp/workshop/auth/AuthService.java), [UserRepository.java](/auth/src/main/java/com/bcp/workshop/auth/UserRepository.java), [TokenService.java](/auth/src/main/java/com/bcp/workshop/auth/TokenService.java) | Resuelto | Separado en Resource (HTTP) → Service (reglas) → Repository (persistencia) → TokenService (firma), con guard clauses (`requireNonBlank`) en vez de `if`/`else` anidados. `LoginResponseDto`/`UserSummaryDto` reemplazan el `Map` armado a mano. |
+| H-AUTH-08 | Errores | La respuesta 500 exponía `error.getMessage()` y la clase de la excepción al cliente | [AuthResource.java](/auth/src/main/java/com/bcp/workshop/auth/AuthResource.java) | Resuelto | Excepciones de negocio (`InvalidLoginRequestException`, `InvalidCredentialsException`) mapean a 400/401 con mensaje de dominio; cualquier otra excepción devuelve un mensaje genérico y se loguea el detalle en servidor (`Logger`, antes `printStackTrace`). Se retira el campo `debug` de la respuesta (no lo consumía el frontend, ver `web/src/app/login/login.component.ts`). |
+
+Nota: `RETO.md` agrupa SCA de `auth` en una sola fila ("Quarkus `3.27.4` y
+Commons Text `1.9`"); aquí se registran como `H-AUTH-01` (Commons Text, CVE
+confirmado) y `H-AUTH-02` (resto de dependencias con actualización disponible
+vía Dependabot) para poder rastrear y cerrar cada una con su propia evidencia.

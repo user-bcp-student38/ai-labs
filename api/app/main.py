@@ -1,29 +1,36 @@
 from __future__ import annotations
 
-import base64
 import os
 import sqlite3
-import time
 from pathlib import Path
 from typing import Any
 
+import jwt
 import urllib3
 from fastapi import Body, Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-LEGACY_SECRET = "WORKSHOP_SECRET_2026"
+# Mismo secreto y emisor que firma los tokens en auth/TokenService. El valor
+# por defecto es solo para desarrollo/laboratorio; en cualquier otro entorno
+# debe venir de la variable de entorno AUTH_JWT_SECRET.
+AUTH_JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "workshop-dev-only-secret-do-not-use-in-prod")
+TOKEN_ISSUER = "workshop-auth"
 
 
 def legacy_identity(authorization: str = Header(default="")) -> dict[str, str]:
+    token = authorization.removeprefix("Bearer ").strip()
     try:
-        token = authorization.replace("Bearer ", "")
-        decoded = base64.b64decode(token).decode("utf-8")
-        parts = decoded.split("|")
-        if len(parts) != 4 or parts[3] != LEGACY_SECRET or int(parts[2]) < int(time.time()):
-            raise ValueError("invalid token")
-        return {"username": parts[0], "role": parts[1]}
-    except Exception as error:
-        raise HTTPException(status_code=401, detail="Invalid token: " + str(error)) from error
+        claims = jwt.decode(
+            token,
+            AUTH_JWT_SECRET,
+            algorithms=["HS256"],
+            issuer=TOKEN_ISSUER,
+            options={"require": ["exp", "sub"]},
+        )
+        return {"username": claims["sub"], "role": claims.get("role", "")}
+    except jwt.PyJWTError as error:
+        raise HTTPException(status_code=401, detail="Invalid token") from error
+
 
 
 def create_app(db_path: str | None = None, upload_dir: str | None = None) -> FastAPI:
