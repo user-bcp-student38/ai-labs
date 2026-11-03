@@ -1,0 +1,71 @@
+### Peticiones de auth (REST Client de VS Code o compatible)
+### Requiere auth en http://localhost:8080. Usuarios de prueba del laboratorio.
+
+@authUrl = http://localhost:8080
+
+### Salud del servicio
+GET {{authUrl}}/q/health
+
+### Login válido (student) -> 200 con token JWT, expiresIn y user
+# @name loginStudent
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "student",
+  "password": "Workshop123!",
+  "client": "angular-workshop"
+}
+
+### Login válido (trainer) -> 200
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "trainer",
+  "password": "Trainer123!"
+}
+
+### Password incorrecta -> 401 { "message": "Invalid username or password" }
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "student",
+  "password": "incorrecta"
+}
+
+### Usuario inexistente -> 401 (mismo mensaje genérico)
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "nadie",
+  "password": "Workshop123!"
+}
+
+### Sin username -> 400 { "message": "Username is required" }
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "password": "Workshop123!"
+}
+
+### Sin password -> 400 { "message": "Password is required" }
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "student"
+}
+
+### CORS: origen permitido (http://localhost:4200) -> Access-Control-Allow-Origin
+OPTIONS {{authUrl}}/auth/login
+Origin: http://localhost:4200
+Access-Control-Request-Method: POST
+
+### CORS: origen no permitido -> 403 (Quarkus rechaza el origen)
+OPTIONS {{authUrl}}/auth/login
+Origin: http://sitio-no-permitido.example
+Access-Control-Request-Method: POST
