@@ -20,13 +20,14 @@ public class AuthService {
     public LoginResponseDto login(LoginRequest request) {
         String username = requireNonBlank(request == null ? null : request.username, "Username is required");
         String password = requireNonBlank(request == null ? null : request.password, "Password is required");
+        String client = requireNonBlank(request == null ? null : request.client, "Client is required");
 
         UserRecord user = userRepository.findByUsername(username);
         if (user == null || !BcryptUtil.matches(password, user.passwordHash())) {
             throw new InvalidCredentialsException("Invalid username or password");
         }
 
-        String token = tokenService.create(user.username(), user.role());
+        String token = tokenService.create(user.username(), user.role(), client);
         UserSummaryDto userSummary = new UserSummaryDto(
                 user.username(),
                 StringEscapeUtils.escapeHtml4(user.displayName()),
