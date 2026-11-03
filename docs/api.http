@@ -1,0 +1,61 @@
+### Peticiones de api (REST Client de VS Code o compatible)
+### Requiere auth en :8080 y api en :8000. El token se obtiene con el login de abajo.
+
+@authUrl = http://localhost:8080
+@apiUrl = http://localhost:8000
+
+### 1) Login: guarda el token para las demás peticiones
+# @name login
+POST {{authUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "student",
+  "password": "Workshop123!"
+}
+
+###
+@token = {{login.response.body.token}}
+
+### Listar tareas del usuario autenticado -> 200
+GET {{apiUrl}}/api/tasks
+Authorization: Bearer {{token}}
+
+### Crear tarea -> 201
+POST {{apiUrl}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Probar con .http",
+  "description": "Tarea creada desde docs/api.http",
+  "status": "TODO",
+  "priority": "HIGH"
+}
+
+### Resumen de tareas -> 200 { owner, total, byStatus, highPriorityOpen }
+GET {{apiUrl}}/api/summary
+Authorization: Bearer {{token}}
+
+### Subir requerimiento (multipart) -> 201 { owner, fileName, storedAt, size }
+POST {{apiUrl}}/api/requirements
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LabBoundary
+
+--LabBoundary
+Content-Disposition: form-data; name="file"; filename="requirements.txt"
+Content-Type: text/plain
+
+El login debe ser accesible.
+--LabBoundary--
+
+### Salud del backend auth vista desde api -> 200
+GET {{apiUrl}}/api/backend-health
+Authorization: Bearer {{token}}
+
+### Sin token -> 401 { "detail": "Invalid token" }
+GET {{apiUrl}}/api/tasks
+
+### Token inválido -> 401
+GET {{apiUrl}}/api/tasks
+Authorization: Bearer no-es-un-jwt

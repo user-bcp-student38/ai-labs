@@ -2,12 +2,16 @@ name: ai-labs
 services:
   auth:
     build: ./auth
+    environment:
+      AUTH_JWT_SECRET: workshop-dev-only-secret-do-not-use-in-prod
+      AUTH_CORS_ORIGINS: http://localhost:4200
     ports:
       - "127.0.0.1:8080:8080"
   api:
     build: ./api
     environment:
       AUTH_HEALTH_URL: http://auth:8080/q/health
+      AUTH_JWT_SECRET: workshop-dev-only-secret-do-not-use-in-prod
       WORKSHOP_DB_PATH: /data/workshop.db
       WORKSHOP_UPLOAD_DIR: /uploads
     volumes:
