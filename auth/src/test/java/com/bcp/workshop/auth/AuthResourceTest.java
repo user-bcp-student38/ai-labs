@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
@@ -20,6 +22,7 @@ class AuthResourceTest {
                 .body("user.username", is("student"))
                 .body("user.displayName", is("Workshop Student"))
                 .body("user.role", is("STUDENT"))
+                .body("expiresIn", is(3600))
                 .body("token", notNullValue());
     }
 
@@ -32,7 +35,19 @@ class AuthResourceTest {
                 .body("{\"password\":\"Workshop123!\"}")
                 .when().post("/auth/login")
                 .then()
-                .statusCode(400);
+                .statusCode(400)
+                .body("message", is("Username is required"));
+    }
+
+    @Test
+    void rejectsBlankUsername() {
+        given()
+                .contentType("application/json")
+                .body("{\"username\":\"  \",\"password\":\"Workshop123!\"}")
+                .when().post("/auth/login")
+                .then()
+                .statusCode(400)
+                .body("message", is("Username is required"));
     }
 
     @Test
@@ -42,7 +57,19 @@ class AuthResourceTest {
                 .body("{\"username\":\"student\"}")
                 .when().post("/auth/login")
                 .then()
-                .statusCode(400);
+                .statusCode(400)
+                .body("message", is("Password is required"));
+    }
+
+    @Test
+    void rejectsBlankPassword() {
+        given()
+                .contentType("application/json")
+                .body("{\"username\":\"student\",\"password\":\"  \"}")
+                .when().post("/auth/login")
+                .then()
+                .statusCode(400)
+                .body("message", is("Password is required"));
     }
 
     @Test
@@ -52,7 +79,21 @@ class AuthResourceTest {
                 .body("{\"username\":\"student\",\"password\":\"not-the-password\"}")
                 .when().post("/auth/login")
                 .then()
-                .statusCode(401);
+                .statusCode(401)
+                .body("message", is("Invalid username or password"))
+                .body("$", not(hasKey("token")));
+    }
+
+    @Test
+    void rejectsUnknownUsername() {
+        given()
+                .contentType("application/json")
+                .body("{\"username\":\"unknown-user\",\"password\":\"anything\"}")
+                .when().post("/auth/login")
+                .then()
+                .statusCode(401)
+                .body("message", is("Invalid username or password"))
+                .body("$", not(hasKey("token")));
     }
 
     // Regresión H-AUTH-04: antes del fix, este intento de inyección SQL
@@ -66,6 +107,20 @@ class AuthResourceTest {
                 .body("{\"username\":\"student' -- \",\"password\":\"anything\"}")
                 .when().post("/auth/login")
                 .then()
-                .statusCode(401);
+                .statusCode(401)
+                .body("message", is("Invalid username or password"))
+                .body("$", not(hasKey("token")));
+    }
+
+    @Test
+    void rejectsSqlInjectionInPassword() {
+        given()
+                .contentType("application/json")
+                .body("{\"username\":\"student\",\"password\":\"anything' OR '1'='1\"}")
+                .when().post("/auth/login")
+                .then()
+                .statusCode(401)
+                .body("message", is("Invalid username or password"))
+                .body("$", not(hasKey("token")));
     }
 }
